@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Expense Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;}
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#1e293b}::-webkit-scrollbar-thumb{background:#475569;border-radius:3px}
+    input,select,textarea{outline:none;}
+    input:focus,select:focus,textarea:focus{border-color:#6366f1!important;box-shadow:0 0 0 3px rgba(99,102,241,.2);}
+    .fade-in{animation:fadeIn .25s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .card{background:#1e293b;border:1px solid #334155;border-radius:12px;}
+    .btn{cursor:pointer;border:none;border-radius:8px;font-weight:600;transition:opacity .15s,transform .1s;}
+    .btn:hover{opacity:.88;}.btn:active{transform:scale(.98);}
+    .btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;}
+    .btn-danger{background:#dc2626;color:#fff;}
+    .btn-success{background:#16a34a;color:#fff;}
+    .btn-ghost{background:#334155;color:#e2e8f0;}
+    .tag{display:inline-flex;align-items:center;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;}
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
+    .inp{background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:10px 12px;width:100%;font-size:14px;}
+    .lbl{display:block;font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:6px;}
+    .avatar{border-radius:99px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ── Static data ─────────────────────────────────────────────────── */
+const DEMO_USERS = [
+  { email:"alice@demo.com",   name:"Alice Johnson", role:"employee", color:"#6366f1", initials:"AJ" },
+  { email:"bob@demo.com",     name:"Bob Smith",     role:"employee", color:"#06b6d4", initials:"BS" },
+  { email:"carol@demo.com",   name:"Carol White",   role:"employee", color:"#f59e0b", initials:"CW" },
+  { email:"david@demo.com",   name:"David Lee",     role:"manager",  color:"#10b981", initials:"DL" },
+  { email:"emma@demo.com",    name:"Emma Davis",    role:"manager",  color:"#ec4899", initials:"ED" },
+  { email:"admin@demo.com",   name:"Admin",         role:"admin",    color:"#f43f5e", initials:"AD" },
+];
+
+const COUNTRIES = [
+  {name:"United States",  code:"US", currency:"USD", symbol:"$",   rate:1.000},
+  {name:"United Kingdom", code:"GB", currency:"GBP", symbol:"£",   rate:0.790},
+  {name:"European Union", code:"EU", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"Japan",          code:"JP", currency:"JPY", symbol:"¥",   rate:149.5},
+  {name:"Australia",      code:"AU", currency:"AUD", symbol:"A$",  rate:1.530},
+  {name:"Canada",         code:"CA", currency:"CAD", symbol:"C$",  rate:1.360},
+  {name:"Switzerland",    code:"CH", currency:"CHF", symbol:"Fr",  rate:0.880},
+  {name:"China",          code:"CN", currency:"CNY", symbol:"¥",   rate:7.240},
+  {name:"India",          code:"IN", currency:"INR", symbol:"₹",   rate:83.10},
+  {name:"Brazil",         code:"BR", currency:"BRL", symbol:"R$",  rate:4.970},
+  {name:"Mexico",         code:"MX", currency:"MXN", symbol:"$",   rate:17.15},
+  {name:"South Korea",    code:"KR", currency:"KRW", symbol:"₩",   rate:1330.},
+  {name:"Singapore",      code:"SG", currency:"SGD", symbol:"S$",  rate:1.340},
+  {name:"Thailand",       code:"TH", currency:"THB", symbol:"฿",   rate:35.50},
+  {name:"UAE",            code:"AE", currency:"AED", symbol:"د.إ", rate:3.670},
+  {name:"Israel",         code:"IL", currency:"ILS", symbol:"₪",   rate:3.760},
+  {name:"South Africa",   code:"ZA", currency:"ZAR", symbol:"R",   rate:18.70},
+  {name:"Turkey",         code:"TR", currency:"TRY", symbol:"₺",   rate:32.50},
+  {name:"Norway",         code:"NO", currency:"NOK", symbol:"kr",  rate:10.60},
+  {name:"Sweden",         code:"SE", currency:"SEK", symbol:"kr",  rate:10.45},
+  {name:"Denmark",        code:"DK", currency:"DKK", symbol:"kr",  rate:6.880},
+  {name:"Poland",         code:"PL", currency:"PLN", symbol:"zł",  rate:3.990},
+  {name:"Indonesia",      code:"ID", currency:"IDR", symbol:"Rp",  rate:15700},
+  {name:"Malaysia",       code:"MY", currency:"MYR", symbol:"RM",  rate:4.720},
+  {name:"Vietnam",        code:"VN", currency:"VND", symbol:"₫",   rate:24400},
+  {name:"Portugal",       code:"PT", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"Spain",          code:"ES", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"France",         code:"FR", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"Germany",        code:"DE", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"Italy",          code:"IT", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"Netherlands",    code:"NL", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"Greece",         code:"GR", currency:"EUR", symbol:"€",   rate:0.920},
+  {name:"New Zealand",    code:"NZ", currency:"NZD", symbol:"NZ$", rate:1.620},
+  {name:"Morocco",        code:"MA", currency:"MAD", symbol:"د.م", rate:10.03},
+  {name:"Egypt",          code:"EG", currency:"EGP", symbol:"£",   rate:30.90},
+  {name:"Philippines",    code:"PH", currency:"PHP", symbol:"₱",   rate:56.50},
+  {name:"Argentina",      code:"AR", currency:"ARS", symbol:"$",   rate:870.0},
+  {name:"Colombia",       code:"CO", currency:"COP", symbol:"$",   rate:3920.},
+];
+
+const CITIES = {
+  US:["New York","Los Angeles","Chicago","Houston","San Francisco","Seattle","Miami","Boston","Las Vegas","Washington DC"],
+  GB:["London","Manchester","Birmingham","Edinburgh","Glasgow","Liverpool","Bristol"],
+  EU:["Brussels","Luxembourg"],
+  JP:["Tokyo","Osaka","Kyoto","Hiroshima","Sapporo","Fukuoka"],
+  AU:["Sydney","Melbourne","Brisbane","Perth","Adelaide","Gold Coast"],
+  CA:["Toronto","Vancouver","Montreal","Calgary","Ottawa","Edmonton"],
+  CH:["Zurich","Geneva","Basel","Bern","Lausanne"],
+  CN:["Beijing","Shanghai","Guangzhou","Shenzhen","Chengdu","Xi'an"],
+  IN:["Mumbai","Delhi","Bangalore","Hyderabad","Chennai","Kolkata","Goa"],
+  BR:["São Paulo","Rio de Janeiro","Brasília","Salvador","Manaus"],
+  MX:["Mexico City","Cancún","Guadalajara","Monterrey","Tijuana","Mérida"],
+  KR:["Seoul","Busan","Incheon","Daegu","Jeju"],
+  SG:["Singapore"],
+  TH:["Bangkok","Chiang Mai","Phuket","Pattaya","Koh Samui"],
+  AE:["Dubai","Abu Dhabi","Sharjah","Ajman"],
+  IL:["Tel Aviv","Jerusalem","Haifa","Eilat","Beer Sheva"],
+  ZA:["Cape Town","Johannesburg","Durban","Pretoria"],
+  TR:["Istanbul","Ankara","Izmir","Antalya","Bodrum"],
+  NO:["Oslo","Bergen","Trondheim","Stavanger","Tromsø"],
+  SE:["Stockholm","Gothenburg","Malmö","Uppsala"],
+  DK:["Copenhagen","Aarhus","Odense","Aalborg"],
+  PL:["Warsaw","Krakow","Gdansk","Wroclaw","Poznan"],
+  ID:["Bali","Jakarta","Yogyakarta","Surabaya","Lombok"],
+  MY:["Kuala Lumpur","Penang","Langkawi","Kota Kinabalu","Malacca"],
+  VN:["Ho Chi Minh City","Hanoi","Da Nang","Hoi An","Nha Trang"],
+  PT:["Lisbon","Porto","Algarve","Sintra"],
+  ES:["Barcelona","Madrid","Seville","Valencia","Granada","Ibiza","Mallorca"],
+  FR:["Paris","Nice","Lyon","Marseille","Bordeaux","Cannes"],
+  DE:["Berlin","Munich","Hamburg","Frankfurt","Cologne","Dresden"],
+  IT:["Rome","Milan","Venice","Florence","Naples","Sicily"],
+  NL:["Amsterdam","Rotterdam","The Hague","Utrecht"],
+  GR:["Athens","Santorini","Mykonos","Thessaloniki","Crete","Rhodes"],
+  NZ:["Auckland","Wellington","Christchurch","Queenstown"],
+  MA:["Marrakech","Casablanca","Fes","Chefchaouen","Rabat"],
+  EG:["Cairo","Alexandria","Luxor","Sharm El Sheikh","Hurghada"],
+  PH:["Manila","Cebu","Boracay","Palawan","Davao"],
+  AR:["Buenos Aires","Córdoba","Mendoza","Bariloche"],
+  CO:["Bogotá","Medellín","Cartagena","Cali"],
+};
+
+const DEFAULT_CATEGORIES = ["Taxi","Hotel","WiFi","Parking","Hosting","Flight","Food","Entertainment","Shopping","Medical"];
+
+const CAT_COLORS = {
+  Taxi:"#f59e0b",Hotel:"#6366f1",WiFi:"#06b6d4",Parking:"#10b981",
+  Hosting:"#8b5cf6",Flight:"#3b82f6",Food:"#ef4444",Entertainment:"#ec4899",
+  Shopping:"#f97316",Medical:"#14b8a6",
+};
+const CAT_ICONS = {
+  Taxi:"🚕",Hotel:"🏨",WiFi:"📶",Parking:"🅿️",Hosting:"🏠",
+  Flight:"✈️",Food:"🍽️",Entertainment:"🎭",Shopping:"🛍️",Medical:"💊",
+};
+
+const STATUS_META = {
+  pending:  { label:"Pending",  color:"#f59e0b", bg:"#f59e0b22", icon:"⏳" },
+  approved: { label:"Approved", color:"#10b981", bg:"#10b98122", icon:"✅" },
+  rejected: { label:"Rejected", color:"#ef4444", bg:"#ef444422", icon:"❌" },
+};
+
+const USER_COLORS = ["#6366f1","#06b6d4","#f59e0b","#10b981","#ec4899","#f43f5e","#8b5cf6","#3b82f6","#14b8a6","#f97316","#a855f7","#84cc16"];
+
+function uid(){ return Math.random().toString(36).slice(2)+Date.now().toString(36); }
+function fmt(n,d=2){ return Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function initials(name){ return name.trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
+
+// Module-level ref so userBy() always sees latest user list without prop-drilling
+let _users = DEMO_USERS;
+function userBy(email){ return _users.find(u=>u.email===email); }
+
+/* ── Seed demo data ──────────────────────────────────────────────── */
+function seedExpenses(){
+  const now = new Date();
+  const d = (offset) => new Date(now-offset*86400000).toISOString().slice(0,10);
+  return [
+    {id:uid(),expenseType:"travel",submittedBy:"alice@demo.com",country:"France",city:"Paris",category:"Hotel",amount:280,currency:"EUR",symbol:"€",rate:0.92,amountUSD:304.35,date:d(3),notes:"3 nights Hotel Le Marais",status:"pending",approvedBy:null,approvedAt:null,rejectionNote:null},
+    {id:uid(),expenseType:"travel",submittedBy:"alice@demo.com",country:"France",city:"Paris",category:"Taxi",amount:45,currency:"EUR",symbol:"€",rate:0.92,amountUSD:48.91,date:d(3),notes:"Airport transfer",status:"approved",approvedBy:"david@demo.com",approvedAt:d(2),rejectionNote:null},
+    {id:uid(),expenseType:"general",submittedBy:"alice@demo.com",country:"",city:"",category:"Food",amount:38,currency:"USD",symbol:"$",rate:1,amountUSD:38,date:d(2),notes:"Team lunch",status:"approved",approvedBy:"david@demo.com",approvedAt:d(1),rejectionNote:null},
+    {id:uid(),expenseType:"travel",submittedBy:"bob@demo.com",country:"Japan",city:"Tokyo",category:"Hotel",amount:38000,currency:"JPY",symbol:"¥",rate:149.5,amountUSD:254.18,date:d(5),notes:"Shinjuku hotel 2 nights",status:"pending",approvedBy:null,approvedAt:null,rejectionNote:null},
+    {id:uid(),expenseType:"travel",submittedBy:"bob@demo.com",country:"Japan",city:"Tokyo",category:"WiFi",amount:1500,currency:"JPY",symbol:"¥",rate:149.5,amountUSD:10.03,date:d(5),notes:"Pocket WiFi rental",status:"approved",approvedBy:"emma@demo.com",approvedAt:d(4),rejectionNote:null},
+    {id:uid(),expenseType:"general",submittedBy:"bob@demo.com",country:"",city:"",category:"Shopping",amount:75,currency:"USD",symbol:"$",rate:1,amountUSD:75,date:d(4),notes:"Office supplies",status:"pending",approvedBy:null,approvedAt:null,rejectionNote:null},
+    {id:uid(),expenseType:"travel",submittedBy:"carol@demo.com",country:"United States",city:"New York",category:"Parking",amount:120,currency:"USD",symbol:"$",rate:1,amountUSD:120,date:d(1),notes:"3 days conference parking",status:"rejected",approvedBy:"david@demo.com",approvedAt:d(0),rejectionNote:"Please use public transit per company policy."},
+    {id:uid(),expenseType:"general",submittedBy:"carol@demo.com",country:"",city:"",category:"Hosting",amount:350,currency:"USD",symbol:"$",rate:1,amountUSD:350,date:d(1),notes:"Client dinner hosting",status:"pending",approvedBy:null,approvedAt:null,rejectionNote:null},
+  ];
+}
+
+/* ── App root ────────────────────────────────────────────────────── */
+function App(){
+  const [currentUser, setCurrentUser] = useState(()=>{
+    const s = localStorage.getItem("te_user");
+    return s ? JSON.parse(s) : null;
+  });
+  const [expenses, setExpenses] = useState(()=>{
+    const s = localStorage.getItem("te_expenses");
+    return s ? JSON.parse(s) : seedExpenses();
+  });
+  const [categories, setCategories] = useState(()=>{
+    const s = localStorage.getItem("te_cats");
+    return s ? JSON.parse(s) : DEFAULT_CATEGORIES;
+  });
+  const [users, setUsers] = useState(()=>{
+    const s = localStorage.getItem("te_users");
+    return s ? JSON.parse(s) : DEMO_USERS;
+  });
+
+  useEffect(()=>{ localStorage.setItem("te_expenses", JSON.stringify(expenses)); },[expenses]);
+  useEffect(()=>{ localStorage.setItem("te_cats",     JSON.stringify(categories)); },[categories]);
+  useEffect(()=>{ localStorage.setItem("te_user",     JSON.stringify(currentUser)); },[currentUser]);
+  useEffect(()=>{ localStorage.setItem("te_users",    JSON.stringify(users)); _users = users; },[users]);
+
+  const login  = (user) => setCurrentUser(user);
+  const logout = () => { setCurrentUser(null); };
+
+  const addExpense    = (exp) => setExpenses(p=>[exp,...p]);
+  const approveExpense= (id, byEmail) =>
+    setExpenses(p=>p.map(e=>e.id===id?{...e,status:"approved",approvedBy:byEmail,approvedAt:new Date().toISOString().slice(0,10),rejectionNote:null}:e));
+  const rejectExpense = (id, byEmail, note) =>
+    setExpenses(p=>p.map(e=>e.id===id?{...e,status:"rejected",approvedBy:byEmail,approvedAt:new Date().toISOString().slice(0,10),rejectionNote:note}:e));
+  const deleteExpense = (id)  => setExpenses(p=>p.filter(e=>e.id!==id));
+  const deleteMany    = (ids) => setExpenses(p=>p.filter(e=>!ids.includes(e.id)));
+  const updateExpense = (id, patch) => setExpenses(p=>p.map(e=>e.id===id?{...e,...patch}:e));
+  const addCategory   = (cat) => { if(cat&&!categories.includes(cat)) setCategories(p=>[...p,cat]); };
+  const removeCategory= (cat) => { if(!DEFAULT_CATEGORIES.includes(cat)) setCategories(p=>p.filter(c=>c!==cat)); };
+
+  const addUser    = (u)      => setUsers(p=>[...p, u]);
+  const updateUser = (email, patch) => {
+    setUsers(p=>p.map(u=>u.email===email?{...u,...patch}:u));
+    if(currentUser?.email===email) setCurrentUser(u=>({...u,...patch}));
+  };
+  const deleteUser = (email)  => {
+    if(email===currentUser?.email){ alert("You cannot delete your own account."); return; }
+    if(!confirm("Delete this user? Their expenses will remain.")) return;
+    setUsers(p=>p.filter(u=>u.email!==email));
+  };
+
+  if(!currentUser) return <LoginScreen users={users} onLogin={login} />;
+
+  return (
+    <MainApp
+      user={currentUser}
+      users={users}
+      expenses={expenses}
+      categories={categories}
+      onLogout={logout}
+      onAdd={addExpense}
+      onApprove={approveExpense}
+      onReject={rejectExpense}
+      onDelete={deleteExpense}
+      onDeleteMany={deleteMany}
+      onUpdate={updateExpense}
+      onAddCat={addCategory}
+      onRemoveCat={removeCategory}
+      onAddUser={addUser}
+      onUpdateUser={updateUser}
+      onDeleteUser={deleteUser}
+    />
+  );
+}
+
+/* ── Login ───────────────────────────────────────────────────────── */
+function LoginScreen({ users, onLogin }){
+  const [email, setEmail] = useState("");
+  const [err, setErr]     = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+    const user = users.find(u=>u.email.toLowerCase()===email.toLowerCase().trim());
+    if(!user){ setErr("Email not found. Use one of the accounts below."); return; }
+    onLogin(user);
+  };
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{width:"100%",maxWidth:420}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:48,marginBottom:12}}>✈️</div>
+          <h1 style={{fontSize:26,fontWeight:800,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Travel Expenses</h1>
+          <p style={{color:"#64748b",marginTop:6,fontSize:14}}>Sign in to manage and approve expenses</p>
+        </div>
+
+        <div className="card" style={{padding:28}}>
+          <form onSubmit={submit}>
+            <label className="lbl">Email address</label>
+            <input className="inp" type="email" placeholder="you@demo.com" value={email} onChange={e=>{setEmail(e.target.value);setErr("");}} required style={{marginBottom:err?8:16}} />
+            {err && <div style={{color:"#ef4444",fontSize:12,marginBottom:12}}>{err}</div>}
+            <button type="submit" className="btn btn-primary" style={{width:"100%",padding:12,fontSize:15}}>Sign In</button>
+          </form>
+        </div>
+
+        <div className="card" style={{padding:20,marginTop:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#64748b",marginBottom:12}}>DEMO ACCOUNTS</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {users.map(u=>(
+              <button key={u.email} onClick={()=>onLogin(u)} className="btn btn-ghost"
+                style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",textAlign:"left",borderRadius:8}}>
+                <Avatar user={u} size={32} />
+                <div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{u.name}</div>
+                  <div style={{fontSize:11,color:"#64748b"}}>{u.email} · <span style={{color:u.role==="admin"?"#f43f5e":u.role==="manager"?"#10b981":"#6366f1",textTransform:"capitalize"}}>{u.role}</span></div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main app ────────────────────────────────────────────────────── */
+function MainApp({ user, users, expenses, categories, onLogout, onAdd, onApprove, onReject, onDelete, onDeleteMany, onUpdate, onAddCat, onRemoveCat, onAddUser, onUpdateUser, onDeleteUser }){
+  const isManager = user.role==="manager";
+  const isAdmin   = user.role==="admin";
+  const pendingForMe = expenses.filter(e=>e.status==="pending" && e.submittedBy!==user.email);
+
+  const roleColor = isAdmin?"#f43f5e":isManager?"#10b981":"#6366f1";
+
+  const tabs = isAdmin
+    ? [["manage","Manage",0],["approvals","Approvals",pendingForMe.length],["add","+ Add",0],["summary","Summary",0]]
+    : isManager
+      ? [["approvals","Approvals",pendingForMe.length],["all","All Expenses",0],["add","+ Add",0],["summary","Summary",0]]
+      : [["add","+ Add",0],["mine","My Expenses",0],["summary","Summary",0]];
+
+  const [tab, setTab] = useState(tabs[0][0]);
+
+  const myExpenses = expenses.filter(e=>e.submittedBy===user.email);
+  const allSorted  = [...expenses].sort((a,b)=>b.date.localeCompare(a.date));
+
+  return (
+    <div style={{maxWidth:900,margin:"0 auto",padding:"16px 12px",minHeight:"100vh"}}>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <Avatar user={user} size={38} />
+          <div>
+            <div style={{fontWeight:700,fontSize:15}}>{user.name}</div>
+            <div style={{fontSize:12,color:roleColor,fontWeight:600,textTransform:"capitalize"}}>{user.role}</div>
+          </div>
+        </div>
+        <button onClick={onLogout} className="btn btn-ghost" style={{padding:"8px 14px",fontSize:13}}>Sign Out</button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:4,marginBottom:18,background:"#1e293b",padding:4,borderRadius:10,border:"1px solid #334155"}}>
+        {tabs.map(([key,label,badge])=>(
+          <button key={key} onClick={()=>setTab(key)}
+            style={{flex:1,padding:"8px 4px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:13,transition:"all .2s",position:"relative",
+              background:tab===key?"linear-gradient(135deg,#6366f1,#8b5cf6)":"transparent",
+              color:tab===key?"#fff":"#94a3b8"}}>
+            {label}
+            {badge>0 && <span style={{position:"absolute",top:4,right:6,background:"#ef4444",color:"#fff",borderRadius:99,fontSize:10,fontWeight:800,minWidth:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 4px"}}>{badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab==="add"      && <AddForm categories={categories} user={user} onAdd={onAdd} />}
+      {tab==="mine"     && <ExpenseList expenses={myExpenses} title="My Expenses" user={user} onDelete={onDelete} showSubmitter={false} />}
+      {tab==="all"      && <ExpenseList expenses={allSorted}  title="All Expenses" user={user} onDelete={onDelete} showSubmitter={true} />}
+      {tab==="approvals"&& <ApprovalsTab expenses={pendingForMe} user={user} onApprove={onApprove} onReject={onReject} />}
+      {tab==="summary"  && <Summary expenses={(isAdmin||isManager)?allSorted:myExpenses} isManager={isManager||isAdmin} />}
+      {tab==="manage"   && <ManageTab expenses={allSorted} categories={categories} currentUser={user} users={users} onUpdate={onUpdate} onDelete={onDelete} onDeleteMany={onDeleteMany} onAddCat={onAddCat} onRemoveCat={onRemoveCat} onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser} />}
+    </div>
+  );
+}
+
+/* ── Manage Tab (admin) ──────────────────────────────────────────── */
+function ManageTab({ expenses, categories, currentUser, users, onUpdate, onDelete, onDeleteMany, onAddCat, onRemoveCat, onAddUser, onUpdateUser, onDeleteUser }){
+  const [search,   setSearch]   = useState("");
+  const [statusF,  setStatusF]  = useState("all");
+  const [typeF,    setTypeF]    = useState("all");
+  const [userF,    setUserF]    = useState("all");
+  const [selected, setSelected] = useState(new Set());
+  const [editExp,  setEditExp]  = useState(null);
+  const [section,  setSection]  = useState("expenses"); // expenses | categories | users
+  const [newCat,   setNewCat]   = useState("");
+
+  const allUsers = [...new Set(expenses.map(e=>e.submittedBy))];
+
+  const filtered = useMemo(()=> expenses.filter(e=>{
+    if(statusF!=="all" && e.status!==statusF) return false;
+    if(typeF!=="all"   && e.expenseType!==typeF) return false;
+    if(userF!=="all"   && e.submittedBy!==userF) return false;
+    if(search){
+      const q = search.toLowerCase();
+      const u = userBy(e.submittedBy);
+      if(![e.category,e.country,e.city,e.notes,u?.name,e.currency].filter(Boolean).join(" ").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }),[expenses,statusF,typeF,userF,search]);
+
+  const totalUSD    = filtered.reduce((s,e)=>s+e.amountUSD,0);
+  const pendingUSD  = filtered.filter(e=>e.status==="pending").reduce((s,e)=>s+e.amountUSD,0);
+  const approvedUSD = filtered.filter(e=>e.status==="approved").reduce((s,e)=>s+e.amountUSD,0);
+
+  const toggleSel = (id) => setSelected(s=>{ const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n; });
+  const toggleAll = () => setSelected(s=>s.size===filtered.length ? new Set() : new Set(filtered.map(e=>e.id)));
+
+  const bulkDelete = () => {
+    if(!confirm(`Delete ${selected.size} expense(s)?`)) return;
+    onDeleteMany([...selected]); setSelected(new Set());
+  };
+  const bulkApprove = () => {
+    [...selected].forEach(id=>onUpdate(id,{status:"approved",approvedBy:"admin@demo.com",approvedAt:new Date().toISOString().slice(0,10),rejectionNote:null}));
+    setSelected(new Set());
+  };
+  const bulkReject = () => {
+    const note = prompt("Rejection reason:");
+    if(note===null) return;
+    [...selected].forEach(id=>onUpdate(id,{status:"rejected",approvedBy:"admin@demo.com",approvedAt:new Date().toISOString().slice(0,10),rejectionNote:note||"Rejected by admin"}));
+    setSelected(new Set());
+  };
+
+  const exportCSV = () => {
+    const rows = [["Date","Submitter","Type","Category","Country","City","Amount","Currency","USD","Status","Approved By","Notes"]];
+    filtered.forEach(e=>{
+      const u = userBy(e.submittedBy);
+      const a = e.approvedBy ? userBy(e.approvedBy)?.name||e.approvedBy : "";
+      rows.push([e.date,u?.name||e.submittedBy,e.expenseType||"travel",e.category,e.country,e.city,e.amount,e.currency,e.amountUSD.toFixed(2),e.status,a,e.notes||""]);
+    });
+    const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    a.download = `expenses-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
+
+  const inp = {background:"#0f172a",border:"1px solid #334155",borderRadius:8,color:"#e2e8f0",padding:"8px 10px",fontSize:13};
+
+  return (
+    <div className="fade-in" style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* Section switcher */}
+      <div style={{display:"flex",gap:6}}>
+        {[["expenses","📋 Expenses"],["categories","🏷️ Categories"],["users","👥 Users"]].map(([key,label])=>(
+          <button key={key} onClick={()=>setSection(key)} className="btn"
+            style={{padding:"8px 16px",fontSize:13,
+              background:section===key?"linear-gradient(135deg,#f43f5e,#ec4899)":"#1e293b",
+              color:section===key?"#fff":"#94a3b8",
+              border:`1px solid ${section===key?"#f43f5e":"#334155"}`}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── EXPENSES section ── */}
+      {section==="expenses" && (<>
+
+        {/* Stats */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+          {[["Total",`$${fmt(totalUSD)}`,"#6366f1"],["Pending",`$${fmt(pendingUSD)}`,"#f59e0b"],["Approved",`$${fmt(approvedUSD)}`,"#10b981"]].map(([l,v,c])=>(
+            <div key={l} className="card" style={{padding:"12px 16px"}}>
+              <div style={{fontSize:11,color:"#64748b",fontWeight:700}}>{l.toUpperCase()}</div>
+              <div style={{fontSize:20,fontWeight:800,color:c,marginTop:4}}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div className="card" style={{padding:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,marginBottom:10}}>
+            <input className="inp" placeholder="Search by user, category, country, notes…" value={search} onChange={e=>setSearch(e.target.value)} style={{...inp,width:"100%"}} />
+            <button onClick={exportCSV} className="btn btn-ghost" style={{padding:"8px 14px",fontSize:13,whiteSpace:"nowrap"}}>⬇ Export CSV</button>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {["all","pending","approved","rejected"].map(s=>(
+              <button key={s} onClick={()=>setStatusF(s)} className="btn" style={{padding:"4px 12px",fontSize:12,
+                background:statusF===s?(s==="all"?"#334155":STATUS_META[s]?.bg):"transparent",
+                color:statusF===s?(s==="all"?"#e2e8f0":STATUS_META[s]?.color):"#64748b",
+                border:`1px solid ${statusF===s?(s==="all"?"#334155":STATUS_META[s]?.color):"transparent"}`}}>
+                {s==="all"?"All Status":STATUS_META[s].label}
+              </button>
+            ))}
+            <span style={{width:1,background:"#334155",margin:"0 4px"}}/>
+            {[["all","All Types"],["travel","✈️ Travel"],["general","🏢 General"]].map(([k,l])=>(
+              <button key={k} onClick={()=>setTypeF(k)} className="btn" style={{padding:"4px 12px",fontSize:12,
+                background:typeF===k?"#334155":"transparent",color:typeF===k?"#e2e8f0":"#64748b",
+                border:`1px solid ${typeF===k?"#475569":"transparent"}`}}>{l}</button>
+            ))}
+            <span style={{width:1,background:"#334155",margin:"0 4px"}}/>
+            <select value={userF} onChange={e=>setUserF(e.target.value)} style={{...inp,padding:"4px 10px",fontSize:12}}>
+              <option value="all">All Users</option>
+              {allUsers.map(email=>{ const u=userBy(email); return <option key={email} value={email}>{u?.name||email}</option>; })}
+            </select>
+          </div>
+        </div>
+
+        {/* Bulk action bar */}
+        {selected.size>0 && (
+          <div className="fade-in" style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"#1e293b",borderRadius:10,border:"1px solid #6366f1",flexWrap:"wrap"}}>
+            <span style={{fontSize:13,fontWeight:600,color:"#6366f1"}}>{selected.size} selected</span>
+            <button onClick={bulkApprove} className="btn btn-success" style={{padding:"6px 14px",fontSize:13}}>✓ Approve All</button>
+            <button onClick={bulkReject}  className="btn btn-danger"  style={{padding:"6px 14px",fontSize:13}}>✕ Reject All</button>
+            <button onClick={bulkDelete}  className="btn btn-danger"  style={{padding:"6px 14px",fontSize:13}}>🗑 Delete</button>
+            <button onClick={()=>setSelected(new Set())} className="btn btn-ghost" style={{padding:"6px 12px",fontSize:13}}>Clear</button>
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="card" style={{overflow:"hidden"}}>
+          {/* Table header */}
+          <div style={{display:"grid",gridTemplateColumns:"32px 90px 1fr 80px 90px 90px 90px 60px",gap:8,padding:"10px 14px",borderBottom:"1px solid #334155",fontSize:11,fontWeight:700,color:"#64748b"}}>
+            <input type="checkbox" checked={selected.size===filtered.length && filtered.length>0} onChange={toggleAll} style={{cursor:"pointer"}} />
+            <span>DATE</span><span>SUBMITTER</span><span>TYPE</span><span>CATEGORY</span><span>AMOUNT</span><span>STATUS</span><span>ACTIONS</span>
+          </div>
+
+          {filtered.length===0 && <div style={{padding:32,textAlign:"center",color:"#475569",fontSize:14}}>No expenses match your filters.</div>}
+
+          <div style={{maxHeight:480,overflowY:"auto"}}>
+            {filtered.map((e,i)=>{
+              const sm  = STATUS_META[e.status];
+              const u   = userBy(e.submittedBy);
+              const cat = e.category;
+              return (
+                <div key={e.id} style={{display:"grid",gridTemplateColumns:"32px 90px 1fr 80px 90px 90px 90px 60px",gap:8,padding:"10px 14px",
+                  borderBottom:i<filtered.length-1?"1px solid #1a2535":"none",
+                  background:selected.has(e.id)?"#1e293b88":"transparent",
+                  alignItems:"center"}}>
+                  <input type="checkbox" checked={selected.has(e.id)} onChange={()=>toggleSel(e.id)} style={{cursor:"pointer"}} />
+                  <span style={{fontSize:12,color:"#64748b"}}>{e.date}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
+                    {u && <Avatar user={u} size={22} />}
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u?.name||e.submittedBy}</div>
+                      {e.expenseType==="travel" && e.city && <div style={{fontSize:10,color:"#64748b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.city}, {e.country}</div>}
+                      {e.notes && <div style={{fontSize:10,color:"#475569",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.notes}</div>}
+                    </div>
+                  </div>
+                  <span style={{fontSize:11,color:e.expenseType==="travel"?"#3b82f6":"#10b981",fontWeight:600}}>
+                    {e.expenseType==="travel"?"✈️":"🏢"}
+                  </span>
+                  <span className="tag" style={{background:(CAT_COLORS[cat]||"#64748b")+"22",color:CAT_COLORS[cat]||"#64748b",fontSize:11}}>{cat}</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700}}>{e.symbol}{fmt(e.amount)}</div>
+                    <div style={{fontSize:10,color:"#64748b"}}>${fmt(e.amountUSD)}</div>
+                  </div>
+                  <span className="tag" style={{background:sm.bg,color:sm.color,fontSize:11}}>{sm.icon} {sm.label}</span>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>setEditExp(e)} className="btn btn-ghost" style={{padding:"4px 8px",fontSize:12}} title="Edit">✏️</button>
+                    <button onClick={()=>{ if(confirm("Delete this expense?")) onDelete(e.id); }} className="btn btn-danger" style={{padding:"4px 8px",fontSize:12}} title="Delete">🗑</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{padding:"10px 16px",borderTop:"1px solid #334155",fontSize:12,color:"#64748b"}}>
+            Showing {filtered.length} of {expenses.length} expenses
+          </div>
+        </div>
+      </>)}
+
+      {/* ── CATEGORIES section ── */}
+      {section==="categories" && (
+        <div className="card fade-in" style={{padding:24}}>
+          <h3 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Expense Categories</h3>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
+            {categories.map(cat=>(
+              <div key={cat} style={{display:"flex",alignItems:"center",gap:6,background:(CAT_COLORS[cat]||"#64748b")+"22",border:`1px solid ${(CAT_COLORS[cat]||"#64748b")}44`,borderRadius:8,padding:"8px 14px"}}>
+                <span>{CAT_ICONS[cat]||"💳"}</span>
+                <span style={{fontSize:13,fontWeight:600,color:CAT_COLORS[cat]||"#94a3b8"}}>{cat}</span>
+                <span style={{fontSize:11,color:"#475569",marginLeft:4}}>
+                  {expenses.filter(e=>e.category===cat).length} expenses
+                </span>
+                {!DEFAULT_CATEGORIES.includes(cat) && (
+                  <button onClick={()=>onRemoveCat(cat)} style={{background:"none",border:"none",cursor:"pointer",color:"#ef4444",fontSize:16,lineHeight:1,padding:"0 0 0 4px"}}>×</button>
+                )}
+              </div>
+            ))}
+          </div>
+          <form onSubmit={ev=>{ev.preventDefault();onAddCat(newCat.trim());setNewCat("");}} style={{display:"flex",gap:8}}>
+            <input className="inp" value={newCat} onChange={e=>setNewCat(e.target.value)} placeholder="New category name…" style={{flex:1}} />
+            <button type="submit" className="btn btn-primary" style={{padding:"10px 18px",fontSize:14,whiteSpace:"nowrap"}}>Add Category</button>
+          </form>
+        </div>
+      )}
+
+      {/* ── USERS section ── */}
+      {section==="users" && (
+        <UsersSection
+          users={users}
+          expenses={expenses}
+          currentUser={currentUser}
+          onAdd={onAddUser}
+          onUpdate={onUpdateUser}
+          onDelete={onDeleteUser}
+        />
+      )}
+
+      {/* Edit modal */}
+      {editExp && <EditExpenseModal expense={editExp} categories={categories} onSave={(patch)=>{onUpdate(editExp.id,patch);setEditExp(null);}} onClose={()=>setEditExp(null)} />}
+    </div>
+  );
+}
+
+/* ── Users Section ───────────────────────────────────────────────── */
+function UsersSection({ users, expenses, currentUser, onAdd, onUpdate, onDelete }){
+  const [modal, setModal] = useState(null); // null | { mode:"add"|"edit", user? }
+
+  const roleColor = r => r==="admin"?"#f43f5e":r==="manager"?"#10b981":"#6366f1";
+
+  const stats = users.map(u=>{
+    const ue = expenses.filter(e=>e.submittedBy===u.email);
+    return {
+      ...u,
+      total:    ue.length,
+      approved: ue.filter(e=>e.status==="approved").reduce((s,e)=>s+e.amountUSD,0),
+      pending:  ue.filter(e=>e.status==="pending").length,
+      rejected: ue.filter(e=>e.status==="rejected").length,
+    };
+  });
+
+  return (
+    <div className="fade-in">
+      {/* Header row */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <span style={{fontSize:13,color:"#64748b"}}>{users.length} user{users.length!==1?"s":""}</span>
+        <button onClick={()=>setModal({mode:"add"})} className="btn btn-primary" style={{padding:"8px 18px",fontSize:13}}>
+          + Add User
+        </button>
+      </div>
+
+      {/* User cards */}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {stats.map(u=>(
+          <div key={u.email} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",background:"#1e293b",borderRadius:12,border:"1px solid #334155",flexWrap:"wrap",gap:12}}>
+            <Avatar user={u} size={44} />
+
+            <div style={{flex:1,minWidth:140}}>
+              <div style={{fontWeight:700,fontSize:14,display:"flex",alignItems:"center",gap:8}}>
+                {u.name}
+                {u.email===currentUser.email && <span style={{fontSize:10,background:"#6366f122",color:"#6366f1",padding:"2px 8px",borderRadius:99,fontWeight:600}}>You</span>}
+              </div>
+              <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{u.email}</div>
+              <span className="tag" style={{marginTop:6,background:roleColor(u.role)+"22",color:roleColor(u.role),textTransform:"capitalize",fontSize:11}}>
+                {u.role}
+              </span>
+            </div>
+
+            <div style={{display:"flex",gap:16,textAlign:"center",flexWrap:"wrap"}}>
+              <div><div style={{fontSize:15,fontWeight:800,color:"#10b981"}}>${fmt(u.approved)}</div><div style={{fontSize:10,color:"#64748b"}}>Approved</div></div>
+              <div><div style={{fontSize:15,fontWeight:800,color:"#f59e0b"}}>{u.pending}</div><div style={{fontSize:10,color:"#64748b"}}>Pending</div></div>
+              <div><div style={{fontSize:15,fontWeight:800,color:"#ef4444"}}>{u.rejected}</div><div style={{fontSize:10,color:"#64748b"}}>Rejected</div></div>
+              <div><div style={{fontSize:15,fontWeight:800,color:"#94a3b8"}}>{u.total}</div><div style={{fontSize:10,color:"#64748b"}}>Total</div></div>
+            </div>
+
+            <div style={{display:"flex",gap:6,flexShrink:0}}>
+              <button onClick={()=>setModal({mode:"edit",user:u})} className="btn btn-ghost" style={{padding:"7px 12px",fontSize:13}}>✏️ Edit</button>
+              {u.email!==currentUser.email && (
+                <button onClick={()=>onDelete(u.email)} className="btn btn-danger" style={{padding:"7px 12px",fontSize:13}}>🗑</button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {modal && (
+        <UserFormModal
+          mode={modal.mode}
+          existing={modal.user}
+          takenEmails={users.map(u=>u.email)}
+          onSave={(data)=>{
+            if(modal.mode==="add") onAdd(data);
+            else onUpdate(modal.user.email, data);
+            setModal(null);
+          }}
+          onClose={()=>setModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── User Form Modal (add & edit) ────────────────────────────────── */
+function UserFormModal({ mode, existing, takenEmails, onSave, onClose }){
+  const isEdit = mode==="edit";
+  const [form, setForm] = useState({
+    name:  existing?.name  || "",
+    email: existing?.email || "",
+    role:  existing?.role  || "employee",
+    color: existing?.color || USER_COLORS[0],
+  });
+  const [err, setErr] = useState("");
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const save = () => {
+    if(!form.name.trim()){ setErr("Name is required."); return; }
+    if(!form.email.trim()){ setErr("Email is required."); return; }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)){ setErr("Enter a valid email."); return; }
+    const emailLower = form.email.toLowerCase().trim();
+    if(!isEdit && takenEmails.map(e=>e.toLowerCase()).includes(emailLower)){ setErr("This email is already taken."); return; }
+    onSave({ name:form.name.trim(), email:emailLower, role:form.role, color:form.color, initials:initials(form.name) });
+  };
+
+  const roleColor = r => r==="admin"?"#f43f5e":r==="manager"?"#10b981":"#6366f1";
+  const preview = { name:form.name||"User", email:form.email, role:form.role, color:form.color, initials:initials(form.name||"U") };
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="card fade-in" style={{padding:28,maxWidth:440,width:"100%"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <h3 style={{fontSize:16,fontWeight:700}}>{isEdit?"✏️ Edit User":"➕ Add User"}</h3>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#64748b",fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+
+        {/* Live preview */}
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#0f172a",borderRadius:10,marginBottom:20,border:"1px solid #334155"}}>
+          <Avatar user={preview} size={44} />
+          <div>
+            <div style={{fontWeight:700,fontSize:14}}>{preview.name}</div>
+            <div style={{fontSize:12,color:"#64748b"}}>{preview.email||"email@example.com"}</div>
+            <span className="tag" style={{marginTop:4,background:roleColor(preview.role)+"22",color:roleColor(preview.role),fontSize:11,textTransform:"capitalize"}}>{preview.role}</span>
+          </div>
+        </div>
+
+        {/* Name */}
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Full Name</label>
+          <input className="inp" value={form.name} onChange={e=>set("name",e.target.value)} placeholder="Jane Smith" />
+        </div>
+
+        {/* Email */}
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Email {isEdit&&<span style={{color:"#475569",fontWeight:400}}>(cannot change)</span>}</label>
+          <input className="inp" type="email" value={form.email} onChange={e=>set("email",e.target.value)} placeholder="jane@company.com" disabled={isEdit} style={{opacity:isEdit?.6:1}} />
+        </div>
+
+        {/* Role */}
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Role</label>
+          <div style={{display:"flex",gap:6}}>
+            {["employee","manager","admin"].map(r=>(
+              <button key={r} type="button" onClick={()=>set("role",r)} className="btn"
+                style={{flex:1,padding:"9px 0",fontSize:13,textTransform:"capitalize",
+                  background:form.role===r?roleColor(r)+"33":"transparent",
+                  color:form.role===r?roleColor(r):"#64748b",
+                  border:`1px solid ${form.role===r?roleColor(r):"#334155"}`}}>
+                {r==="employee"?"👤":r==="manager"?"👔":"🔑"} {r}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Color */}
+        <div style={{marginBottom:20}}>
+          <label className="lbl">Avatar Color</label>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {USER_COLORS.map(c=>(
+              <button key={c} type="button" onClick={()=>set("color",c)}
+                style={{width:30,height:30,borderRadius:99,background:c,border:`3px solid ${form.color===c?"#fff":"transparent"}`,cursor:"pointer",transition:"border .15s"}} />
+            ))}
+          </div>
+        </div>
+
+        {err && <div style={{color:"#ef4444",fontSize:13,marginBottom:14}}>{err}</div>}
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} className="btn btn-ghost" style={{flex:1,padding:11,fontSize:14}}>Cancel</button>
+          <button onClick={save}    className="btn btn-primary" style={{flex:1,padding:11,fontSize:14}}>{isEdit?"Save Changes":"Add User"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Edit Expense Modal ──────────────────────────────────────────── */
+function EditExpenseModal({ expense, categories, onSave, onClose }){
+  const country = COUNTRIES.find(c=>c.name===expense.country);
+  const [form, setForm] = useState({
+    category:      expense.category,
+    amount:        expense.amount,
+    date:          expense.date,
+    notes:         expense.notes||"",
+    status:        expense.status,
+    rejectionNote: expense.rejectionNote||"",
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const amountUSD = country ? form.amount/country.rate : +form.amount;
+
+  const save = () => {
+    const patch = {
+      category:      form.category,
+      amount:        +form.amount,
+      amountUSD:     amountUSD,
+      date:          form.date,
+      notes:         form.notes,
+      status:        form.status,
+      rejectionNote: form.status==="rejected" ? form.rejectionNote : null,
+      approvedBy:    form.status!=="pending"  ? (expense.approvedBy||"admin@demo.com") : null,
+      approvedAt:    form.status!=="pending"  ? (expense.approvedAt||new Date().toISOString().slice(0,10)) : null,
+    };
+    onSave(patch);
+  };
+
+  const u = userBy(expense.submittedBy);
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="card fade-in" style={{padding:28,maxWidth:480,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <h3 style={{fontSize:16,fontWeight:700}}>✏️ Edit Expense</h3>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#64748b",fontSize:20,cursor:"pointer"}}>×</button>
+        </div>
+
+        {/* Read-only info */}
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#0f172a",borderRadius:8,marginBottom:18,border:"1px solid #334155"}}>
+          {u && <Avatar user={u} size={28} />}
+          <div style={{fontSize:13}}>
+            <b>{u?.name||expense.submittedBy}</b>
+            {expense.expenseType==="travel" && expense.city && <span style={{color:"#64748b"}}> · {expense.city}, {expense.country}</span>}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+          <div>
+            <label className="lbl">Category</label>
+            <select className="inp" value={form.category} onChange={e=>set("category",e.target.value)}>
+              {categories.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="lbl">Date</label>
+            <input type="date" className="inp" value={form.date} onChange={e=>set("date",e.target.value)} />
+          </div>
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Amount {country?`(${country.currency})`:"(USD)"}</label>
+          <input type="number" step="0.01" min="0" className="inp" value={form.amount} onChange={e=>set("amount",e.target.value)} />
+          {country && <div style={{fontSize:12,color:"#6366f1",marginTop:4}}>≈ ${fmt(amountUSD)} USD</div>}
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Notes</label>
+          <textarea className="inp" style={{resize:"vertical",minHeight:60}} value={form.notes} onChange={e=>set("notes",e.target.value)} />
+        </div>
+
+        <div style={{marginBottom:form.status==="rejected"?14:20}}>
+          <label className="lbl">Status</label>
+          <div style={{display:"flex",gap:6}}>
+            {["pending","approved","rejected"].map(s=>{
+              const sm=STATUS_META[s];
+              return (
+                <button key={s} type="button" onClick={()=>set("status",s)} className="btn"
+                  style={{flex:1,padding:"8px 0",fontSize:13,
+                    background:form.status===s?sm.bg:"transparent",
+                    color:form.status===s?sm.color:"#64748b",
+                    border:`1px solid ${form.status===s?sm.color:"#334155"}`}}>
+                  {sm.icon} {sm.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {form.status==="rejected" && (
+          <div style={{marginBottom:20}} className="fade-in">
+            <label className="lbl">Rejection reason</label>
+            <textarea className="inp" style={{resize:"vertical",minHeight:60}} value={form.rejectionNote} onChange={e=>set("rejectionNote",e.target.value)} placeholder="Reason for rejection…" />
+          </div>
+        )}
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} className="btn btn-ghost" style={{flex:1,padding:11,fontSize:14}}>Cancel</button>
+          <button onClick={save}    className="btn btn-primary" style={{flex:1,padding:11,fontSize:14}}>Save Changes</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Invoice scanner helper ──────────────────────────────────────── */
+function compressImage(file, maxW=1200, quality=0.75){
+  return new Promise((resolve)=>{
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const scale = Math.min(1, maxW/Math.max(img.width,img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width  = img.width  * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── Invoice viewer modal ────────────────────────────────────────── */
+function InvoiceModal({ src, onClose }){
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="fade-in" style={{maxWidth:680,width:"100%",position:"relative"}} onClick={e=>e.stopPropagation()}>
+        <button onClick={onClose} style={{position:"absolute",top:-14,right:-14,width:32,height:32,borderRadius:99,background:"#ef4444",border:"none",color:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>×</button>
+        <img src={src} alt="Invoice" style={{width:"100%",borderRadius:12,display:"block",boxShadow:"0 20px 60px rgba(0,0,0,.6)"}} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Add Form ────────────────────────────────────────────────────── */
+function AddForm({ categories, user, onAdd }){
+  const today = new Date().toISOString().slice(0,10);
+  const [expenseType, setExpenseType] = useState("travel");
+  const [form, setForm] = useState({country:"",city:"",category:"Taxi",amount:"",date:today,notes:""});
+  const [invoice, setInvoice]   = useState(null);   // base64 string
+  const [scanning, setScanning] = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const fileRef = useRef();
+
+  const isTravel = expenseType === "travel";
+  const country  = isTravel ? COUNTRIES.find(c=>c.name===form.country) : null;
+  const cities   = country ? (CITIES[country.code]||[]) : [];
+  const amountUSD = isTravel
+    ? (country&&form.amount ? +form.amount/country.rate : 0)
+    : (+form.amount||0);
+
+  const set = (k,v) => setForm(f=>({...f,[k]:v,...(k==="country"?{city:""}:{})}));
+
+  const switchType = (t) => {
+    setExpenseType(t);
+    setForm(f=>({...f,country:"",city:"",amount:"",notes:""}));
+  };
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if(!file) return;
+    setScanning(true);
+    const b64 = await compressImage(file);
+    setInvoice(b64);
+    setScanning(false);
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    if(isTravel && (!form.country||!form.city)) return;
+    if(!form.amount) return;
+    onAdd({
+      id:uid(), expenseType, submittedBy:user.email,
+      country: isTravel ? form.country : "",
+      city:    isTravel ? form.city    : "",
+      category:form.category,
+      amount:+form.amount,
+      currency: isTravel ? (country?.currency||"USD") : "USD",
+      symbol:   isTravel ? (country?.symbol||"$")     : "$",
+      rate:     isTravel ? (country?.rate||1)          : 1,
+      amountUSD,
+      date:form.date, notes:form.notes,
+      invoiceImage: invoice || null,
+      status:"pending", approvedBy:null, approvedAt:null, rejectionNote:null,
+    });
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2000);
+    setForm(f=>({...f,amount:"",notes:"",country:"",city:""}));
+    setInvoice(null);
+    if(fileRef.current) fileRef.current.value="";
+  };
+
+  return (
+    <div className="card fade-in" style={{padding:24}}>
+      <h2 style={{fontSize:16,fontWeight:700,marginBottom:16}}>Submit Expense</h2>
+
+      {/* Travel / General toggle */}
+      <div style={{display:"flex",gap:0,marginBottom:20,background:"#0f172a",padding:4,borderRadius:10,border:"1px solid #334155"}}>
+        {[["travel","✈️ Travel"],["general","🏢 General"]].map(([key,label])=>(
+          <button key={key} type="button" onClick={()=>switchType(key)}
+            style={{flex:1,padding:"10px 0",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:14,transition:"all .2s",
+              background:expenseType===key
+                ? key==="travel" ? "linear-gradient(135deg,#3b82f6,#6366f1)" : "linear-gradient(135deg,#10b981,#06b6d4)"
+                : "transparent",
+              color:expenseType===key?"#fff":"#64748b"}}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={submit}>
+        {/* Travel-only: country + city */}
+        {isTravel && (
+          <div className="fade-in" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div>
+              <label className="lbl">Country</label>
+              <select className="inp" value={form.country} onChange={e=>set("country",e.target.value)} required>
+                <option value="">Select country…</option>
+                {COUNTRIES.sort((a,b)=>a.name.localeCompare(b.name)).map(c=>(
+                  <option key={c.code+c.name} value={c.name}>{c.name} ({c.currency})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl">City</label>
+              <select className="inp" value={form.city} onChange={e=>set("city",e.target.value)} required disabled={!form.country}>
+                <option value="">Select city…</option>
+                {cities.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Exchange rate bar (travel only) */}
+        {isTravel && country && (
+          <div className="fade-in" style={{background:"#0f172a",border:"1px solid #334155",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",gap:20,flexWrap:"wrap"}}>
+            <span style={{fontSize:13,color:"#94a3b8"}}>Currency: <b style={{color:"#e2e8f0"}}>{country.currency}</b></span>
+            <span style={{fontSize:13,color:"#94a3b8"}}>Symbol: <b style={{color:"#e2e8f0"}}>{country.symbol}</b></span>
+            <span style={{fontSize:13,color:"#94a3b8"}}>Rate: <b style={{color:"#6366f1"}}>1 USD = {country.rate} {country.currency}</b></span>
+          </div>
+        )}
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+          <div>
+            <label className="lbl">Category</label>
+            <select className="inp" value={form.category} onChange={e=>set("category",e.target.value)}>
+              {categories.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="lbl">Date</label>
+            <input type="date" className="inp" value={form.date} onChange={e=>set("date",e.target.value)} required />
+          </div>
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Amount {isTravel && country ? `(${country.currency})` : "(USD)"}</label>
+          <input type="number" step="0.01" min="0" placeholder="0.00" className="inp" value={form.amount} onChange={e=>set("amount",e.target.value)} required />
+          {isTravel && amountUSD>0 && <div style={{fontSize:12,color:"#6366f1",marginTop:6}}>≈ ${fmt(amountUSD)} USD</div>}
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Notes (optional)</label>
+          <textarea className="inp" style={{resize:"vertical",minHeight:60}} value={form.notes} onChange={e=>set("notes",e.target.value)} placeholder="Description…" />
+        </div>
+
+        {/* ── Invoice scanner ── */}
+        <div style={{marginBottom:20}}>
+          <label className="lbl">Invoice / Receipt</label>
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={handleFile} />
+
+          {!invoice ? (
+            <button type="button" onClick={()=>fileRef.current?.click()}
+              style={{width:"100%",padding:"18px 0",border:"2px dashed #334155",borderRadius:10,background:"#0f172a",color:"#64748b",cursor:"pointer",fontSize:14,fontWeight:600,display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"border-color .2s"}}
+              onMouseOver={e=>e.currentTarget.style.borderColor="#6366f1"}
+              onMouseOut={e=>e.currentTarget.style.borderColor="#334155"}>
+              <span style={{fontSize:28}}>{scanning?"⏳":"📷"}</span>
+              <span>{scanning?"Processing…":"Scan or upload invoice"}</span>
+              <span style={{fontSize:11,color:"#475569"}}>Camera · Photo library · File</span>
+            </button>
+          ) : (
+            <div className="fade-in" style={{position:"relative",borderRadius:10,overflow:"hidden",border:"2px solid #6366f1"}}>
+              <img src={invoice} alt="Invoice preview" style={{width:"100%",display:"block",maxHeight:220,objectFit:"cover"}} />
+              <div style={{position:"absolute",top:8,right:8,display:"flex",gap:6}}>
+                <button type="button" onClick={()=>fileRef.current?.click()}
+                  style={{padding:"5px 10px",borderRadius:6,border:"none",background:"rgba(15,23,42,.85)",color:"#e2e8f0",fontSize:12,cursor:"pointer",fontWeight:600}}>
+                  Replace
+                </button>
+                <button type="button" onClick={()=>{setInvoice(null);if(fileRef.current)fileRef.current.value="";}}
+                  style={{padding:"5px 10px",borderRadius:6,border:"none",background:"rgba(220,38,38,.85)",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:600}}>
+                  Remove
+                </button>
+              </div>
+              <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"6px 12px",background:"rgba(15,23,42,.8)",fontSize:11,color:"#10b981",fontWeight:600}}>
+                ✓ Invoice attached
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#0f172a",borderRadius:8,marginBottom:20,border:"1px solid #334155"}}>
+          <span style={{fontSize:18}}>⏳</span>
+          <span style={{fontSize:13,color:"#94a3b8"}}>Will be submitted as <b style={{color:"#f59e0b"}}>Pending</b> and sent for manager approval.</span>
+        </div>
+
+        <button type="submit" className="btn btn-primary" style={{width:"100%",padding:12,fontSize:15}}>
+          {saved?"✓ Submitted!":"Submit for Approval"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/* ── Approvals Tab (manager) ─────────────────────────────────────── */
+function ApprovalsTab({ expenses, user, onApprove, onReject }){
+  const [modal, setModal]       = useState(null);
+  const [note, setNote]         = useState("");
+  const [viewInvoice, setViewInvoice] = useState(null);
+
+  const confirm = () => {
+    if(modal.mode==="approve") onApprove(modal.exp.id, user.email);
+    else onReject(modal.exp.id, user.email, note.trim()||"No reason provided.");
+    setModal(null); setNote("");
+  };
+
+  if(expenses.length===0) return (
+    <div className="fade-in" style={{textAlign:"center",padding:60,color:"#475569",fontSize:14}}>
+      <div style={{fontSize:48,marginBottom:12}}>🎉</div>
+      No pending approvals — you're all caught up!
+    </div>
+  );
+
+  return (
+    <div className="fade-in">
+      <div style={{fontSize:13,color:"#64748b",marginBottom:12}}>{expenses.length} expense{expenses.length!==1?"s":""} awaiting your approval</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {expenses.map(exp=>{
+          const submitter = userBy(exp.submittedBy);
+          const cat = exp.category;
+          return (
+            <div key={exp.id} className="card" style={{padding:16}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                <div style={{width:40,height:40,borderRadius:10,background:(CAT_COLORS[cat]||"#64748b")+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:20}}>
+                  {CAT_ICONS[cat]||"💳"}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                    <span className="tag" style={{background:exp.expenseType==="travel"?"#3b82f622":"#10b98122",color:exp.expenseType==="travel"?"#3b82f6":"#10b981"}}>
+                      {exp.expenseType==="travel"?"✈️ Travel":"🏢 General"}
+                    </span>
+                    <span className="tag" style={{background:(CAT_COLORS[cat]||"#64748b")+"22",color:CAT_COLORS[cat]||"#64748b"}}>{cat}</span>
+                    {exp.expenseType==="travel" && exp.city && <span style={{fontSize:12,color:"#64748b"}}>{exp.city}, {exp.country}</span>}
+                    <span style={{fontSize:12,color:"#475569"}}>{exp.date}</span>
+                  </div>
+                  {/* Submitter */}
+                  {submitter && (
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                      <Avatar user={submitter} size={20} />
+                      <span style={{fontSize:12,color:"#94a3b8"}}>Submitted by <b style={{color:"#e2e8f0"}}>{submitter.name}</b></span>
+                    </div>
+                  )}
+                  {exp.notes && <div style={{fontSize:12,color:"#64748b",marginBottom:6}}>{exp.notes}</div>}
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div>
+                        <span style={{fontWeight:700,fontSize:16}}>{exp.symbol}{fmt(exp.amount)}</span>
+                        <span style={{fontSize:12,color:"#64748b",marginLeft:8}}>${fmt(exp.amountUSD)} USD</span>
+                      </div>
+                      {exp.invoiceImage && (
+                        <button onClick={()=>setViewInvoice(exp.invoiceImage)} className="btn"
+                          style={{padding:"5px 10px",fontSize:12,background:"#6366f122",color:"#6366f1",border:"1px solid #6366f144"}}>
+                          📎 Invoice
+                        </button>
+                      )}
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>{setModal({exp,mode:"reject"});setNote("");}} className="btn btn-danger" style={{padding:"7px 14px",fontSize:13}}>Reject</button>
+                      <button onClick={()=>setModal({exp,mode:"approve"})} className="btn btn-success" style={{padding:"7px 14px",fontSize:13}}>Approve ✓</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Confirm Modal */}
+      {modal && (
+        <div className="modal-bg" onClick={()=>setModal(null)}>
+          <div className="card fade-in" style={{padding:28,maxWidth:400,width:"100%"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:20,marginBottom:8}}>{modal.mode==="approve"?"✅ Approve Expense":"❌ Reject Expense"}</div>
+            <div style={{fontSize:14,color:"#94a3b8",marginBottom:16}}>
+              <b style={{color:"#e2e8f0"}}>{modal.exp.category}</b> · {modal.exp.symbol}{fmt(modal.exp.amount)} by {userBy(modal.exp.submittedBy)?.name}
+            </div>
+            {modal.mode==="reject" && (
+              <div style={{marginBottom:16}}>
+                <label className="lbl">Rejection reason</label>
+                <textarea className="inp" style={{resize:"vertical",minHeight:80}} value={note} onChange={e=>setNote(e.target.value)} placeholder="Explain why this expense is rejected…" autoFocus />
+              </div>
+            )}
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setModal(null)} className="btn btn-ghost" style={{flex:1,padding:10,fontSize:14}}>Cancel</button>
+              <button onClick={confirm} className={`btn ${modal.mode==="approve"?"btn-success":"btn-danger"}`} style={{flex:1,padding:10,fontSize:14}}>
+                {modal.mode==="approve"?"Confirm Approve":"Confirm Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewInvoice && <InvoiceModal src={viewInvoice} onClose={()=>setViewInvoice(null)} />}
+    </div>
+  );
+}
+
+/* ── Expense List ─────────────────────────────────────────────────── */
+function ExpenseList({ expenses, title, user, onDelete, showSubmitter }){
+  const [filter, setFilter]   = useState("all");
+  const [typeFilter, setTypeF] = useState("all");
+  const [viewInvoice, setViewInvoice] = useState(null);
+  const shown = expenses
+    .filter(e=>filter==="all"    || e.status===filter)
+    .filter(e=>typeFilter==="all"|| e.expenseType===typeFilter);
+
+  return (
+    <div className="fade-in">
+      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div style={{fontSize:13,color:"#64748b",flex:1}}>{title} · {expenses.length} total</div>
+          <div style={{display:"flex",gap:4}}>
+            {["all","pending","approved","rejected"].map(s=>(
+              <button key={s} onClick={()=>setFilter(s)} className="btn"
+                style={{padding:"5px 12px",fontSize:12,
+                  background:filter===s?(s==="all"?"#334155":STATUS_META[s]?.bg||"#334155"):"transparent",
+                  color:filter===s?(s==="all"?"#e2e8f0":STATUS_META[s]?.color||"#e2e8f0"):"#64748b",
+                  border:`1px solid ${filter===s?(s==="all"?"#334155":STATUS_META[s]?.color||"#334155"):"transparent"}`}}>
+                {s==="all"?"All":STATUS_META[s].label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:4}}>
+          {[["all","All Types","#334155","#e2e8f0"],["travel","✈️ Travel","#3b82f622","#3b82f6"],["general","🏢 General","#10b98122","#10b981"]].map(([key,label,bg,color])=>(
+            <button key={key} onClick={()=>setTypeF(key)} className="btn"
+              style={{padding:"4px 12px",fontSize:12,
+                background:typeFilter===key ? bg : "transparent",
+                color:typeFilter===key ? color : "#64748b",
+                border:`1px solid ${typeFilter===key ? color : "transparent"}`}}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {shown.length===0 && <div style={{textAlign:"center",padding:40,color:"#475569",fontSize:14}}>No expenses found.</div>}
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {shown.map(e=>{
+          const sm   = STATUS_META[e.status];
+          const cat  = e.category;
+          const approver = e.approvedBy ? userBy(e.approvedBy) : null;
+          const submitter = showSubmitter ? userBy(e.submittedBy) : null;
+          const canDelete = e.submittedBy===user.email && e.status==="pending";
+          return (
+            <div key={e.id} className="card" style={{padding:14}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                <div style={{width:38,height:38,borderRadius:10,background:(CAT_COLORS[cat]||"#64748b")+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>
+                  {CAT_ICONS[cat]||"💳"}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:4}}>
+                    <span className="tag" style={{background:e.expenseType==="travel"?"#3b82f622":"#10b98122",color:e.expenseType==="travel"?"#3b82f6":"#10b981"}}>
+                      {e.expenseType==="travel"?"✈️ Travel":"🏢 General"}
+                    </span>
+                    <span className="tag" style={{background:(CAT_COLORS[cat]||"#64748b")+"22",color:CAT_COLORS[cat]||"#64748b"}}>{cat}</span>
+                    <span className="tag" style={{background:sm.bg,color:sm.color}}>{sm.icon} {sm.label}</span>
+                    {e.expenseType==="travel" && e.city && <span style={{fontSize:12,color:"#64748b"}}>{e.city}, {e.country}</span>}
+                    <span style={{fontSize:12,color:"#475569"}}>{e.date}</span>
+                  </div>
+
+                  {submitter && (
+                    <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+                      <Avatar user={submitter} size={18} />
+                      <span style={{fontSize:11,color:"#94a3b8"}}>{submitter.name}</span>
+                    </div>
+                  )}
+                  {e.notes && <div style={{fontSize:12,color:"#64748b",marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.notes}</div>}
+
+                  {/* Approval info */}
+                  {approver && (
+                    <div style={{fontSize:11,color:"#64748b",display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+                      {e.status==="approved"?"✅ Approved":"❌ Rejected"} by <b style={{color:"#e2e8f0"}}>{approver.name}</b> on {e.approvedAt}
+                      {e.rejectionNote && <span style={{color:"#ef4444"}}>· "{e.rejectionNote}"</span>}
+                    </div>
+                  )}
+                  {e.status==="pending" && (
+                    <div style={{fontSize:11,color:"#f59e0b",marginTop:2}}>⏳ Awaiting manager approval</div>
+                  )}
+                </div>
+
+                <div style={{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
+                  <div style={{fontWeight:700,fontSize:14}}>{e.symbol}{fmt(e.amount)}</div>
+                  <div style={{fontSize:11,color:"#64748b"}}>${fmt(e.amountUSD)} USD</div>
+                  {e.invoiceImage && (
+                    <button onClick={()=>setViewInvoice(e.invoiceImage)} className="btn"
+                      style={{padding:"4px 8px",fontSize:11,background:"#6366f122",color:"#6366f1",border:"1px solid #6366f144"}}>
+                      📎 Invoice
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button onClick={()=>{ if(confirm("Delete this expense?")) onDelete(e.id); }}
+                      className="btn btn-danger" style={{padding:"4px 8px",fontSize:11}}>✕ Remove</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {viewInvoice && <InvoiceModal src={viewInvoice} onClose={()=>setViewInvoice(null)} />}
+    </div>
+  );
+}
+
+/* ── Summary ─────────────────────────────────────────────────────── */
+function Summary({ expenses, isManager }){
+  const approved = expenses.filter(e=>e.status==="approved");
+  const pending  = expenses.filter(e=>e.status==="pending");
+  const rejected = expenses.filter(e=>e.status==="rejected");
+  const totalApproved = approved.reduce((s,e)=>s+e.amountUSD,0);
+  const totalPending  = pending.reduce((s,e)=>s+e.amountUSD,0);
+
+  const catTotals = useMemo(()=>{
+    const m={};
+    approved.forEach(e=>{ m[e.category]=(m[e.category]||0)+e.amountUSD; });
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  },[expenses]);
+
+  if(expenses.length===0) return <div style={{textAlign:"center",padding:60,color:"#475569",fontSize:14}}>No data yet.</div>;
+
+  return (
+    <div className="fade-in" style={{display:"flex",flexDirection:"column",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12}}>
+        {[
+          {label:"Approved",value:`$${fmt(totalApproved)}`,sub:`${approved.length} expenses`,color:"#10b981"},
+          {label:"Pending",value:`$${fmt(totalPending)}`,sub:`${pending.length} expenses`,color:"#f59e0b"},
+          {label:"Rejected",value:rejected.length,sub:"expenses",color:"#ef4444"},
+        ].map(s=>(
+          <div key={s.label} className="card" style={{padding:16}}>
+            <div style={{fontSize:11,color:"#64748b",fontWeight:600,marginBottom:6}}>{s.label.toUpperCase()}</div>
+            <div style={{fontSize:22,fontWeight:800,color:s.color}}>{s.value}</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {catTotals.length>0 && (
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#94a3b8",marginBottom:14}}>APPROVED — BY CATEGORY</div>
+          {catTotals.map(([cat,amt])=>(
+            <div key={cat} style={{marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                <span style={{fontSize:14,fontWeight:600}}>{CAT_ICONS[cat]||"💳"} {cat}</span>
+                <span style={{fontSize:14,fontWeight:700,color:CAT_COLORS[cat]||"#64748b"}}>${fmt(amt)}</span>
+              </div>
+              <div style={{height:6,background:"#0f172a",borderRadius:99,overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:99,background:CAT_COLORS[cat]||"#64748b",width:`${(amt/totalApproved)*100}%`,transition:"width .6s"}} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isManager && (
+        <div className="card" style={{padding:20}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#94a3b8",marginBottom:14}}>BY EMPLOYEE</div>
+          {Object.entries(
+            expenses.filter(e=>e.status==="approved").reduce((m,e)=>{
+              m[e.submittedBy]=(m[e.submittedBy]||0)+e.amountUSD; return m;
+            },{})
+          ).sort((a,b)=>b[1]-a[1]).map(([email,amt])=>{
+            const u = userBy(email);
+            return (
+              <div key={email} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #1e293b"}}>
+                {u && <Avatar user={u} size={28} />}
+                <span style={{flex:1,fontSize:14}}>{u?.name||email}</span>
+                <span style={{fontWeight:700,fontSize:14}}>${fmt(amt)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Avatar helper ────────────────────────────────────────────────── */
+function Avatar({ user, size=32 }){
+  if(!user) return null;
+  return (
+    <div className="avatar" style={{width:size,height:size,background:user.color+"33",border:`2px solid ${user.color}`,fontSize:size*0.36,color:user.color,letterSpacing:-.5}}>
+      {user.initials}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
