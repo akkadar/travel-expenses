@@ -214,6 +214,7 @@ function App(){
     setUsers(p=>p.map(u=>u.email===email?{...u,...patch}:u));
     if(currentUser?.email===email) setCurrentUser(u=>({...u,...patch}));
   };
+  const saveHomeCountry = (country) => updateUser(currentUser.email, {homeCountry: country});
   const deleteUser = (email)  => {
     if(email===currentUser?.email){ alert("You cannot delete your own account."); return; }
     if(!confirm("Delete this user? Their expenses will remain.")) return;
@@ -240,6 +241,7 @@ function App(){
       onAddUser={addUser}
       onUpdateUser={updateUser}
       onDeleteUser={deleteUser}
+      onSaveHomeCountry={saveHomeCountry}
     />
   );
 }
@@ -295,7 +297,7 @@ function LoginScreen({ users, onLogin }){
 }
 
 /* ── Main app ────────────────────────────────────────────────────── */
-function MainApp({ user, users, expenses, categories, onLogout, onAdd, onApprove, onReject, onDelete, onDeleteMany, onUpdate, onAddCat, onRemoveCat, onAddUser, onUpdateUser, onDeleteUser }){
+function MainApp({ user, users, expenses, categories, onLogout, onAdd, onApprove, onReject, onDelete, onDeleteMany, onUpdate, onAddCat, onRemoveCat, onAddUser, onUpdateUser, onDeleteUser, onSaveHomeCountry }){
   const isManager = user.role==="manager";
   const isAdmin   = user.role==="admin";
   const pendingForMe = expenses.filter(e=>e.status==="pending" && e.submittedBy!==user.email);
@@ -340,7 +342,7 @@ function MainApp({ user, users, expenses, categories, onLogout, onAdd, onApprove
         ))}
       </div>
 
-      {tab==="add"      && <AddForm categories={categories} user={user} onAdd={onAdd} />}
+      {tab==="add"      && <AddForm categories={categories} user={user} onAdd={onAdd} onSaveHomeCountry={onSaveHomeCountry} />}
       {tab==="mine"     && <ExpenseList expenses={myExpenses} title="My Expenses" user={user} onDelete={onDelete} showSubmitter={false} />}
       {tab==="all"      && <ExpenseList expenses={allSorted}  title="All Expenses" user={user} onDelete={onDelete} showSubmitter={true} />}
       {tab==="approvals"&& <ApprovalsTab expenses={pendingForMe} user={user} onApprove={onApprove} onReject={onReject} />}
@@ -890,10 +892,10 @@ function InvoiceModal({ src, onClose }){
 }
 
 /* ── Add Form ────────────────────────────────────────────────────── */
-function AddForm({ categories, user, onAdd }){
+function AddForm({ categories, user, onAdd, onSaveHomeCountry }){
   const today = new Date().toISOString().slice(0,10);
   const [expenseType, setExpenseType] = useState("travel");
-  const [form, setForm] = useState({fromCountry:"",country:"",city:"",category:"Taxi",amount:"",date:today,notes:""});
+  const [form, setForm] = useState({fromCountry: user.homeCountry||"", country:"",city:"",category:"Taxi",amount:"",date:today,notes:""});
   const [invoice, setInvoice]   = useState(null);
   const [scanning, setScanning] = useState(false);
   const [saved, setSaved]       = useState(false);
@@ -922,11 +924,14 @@ function AddForm({ categories, user, onAdd }){
 
   const sortedCountries = COUNTRIES.slice().sort((a,b)=>a.name.localeCompare(b.name));
 
-  const set = (k,v) => setForm(f=>({...f,[k]:v,...(k==="country"?{city:""}:{})}));
+  const set = (k,v) => {
+    setForm(f=>({...f,[k]:v,...(k==="country"?{city:""}:{})}));
+    if(k==="fromCountry" && v) onSaveHomeCountry(v);
+  };
 
   const switchType = (t) => {
     setExpenseType(t);
-    setForm(f=>({...f,fromCountry:"",country:"",city:"",amount:"",notes:""}));
+    setForm(f=>({...f,country:"",city:"",amount:"",notes:""}));
   };
 
   const handleFile = async (e) => {
@@ -962,7 +967,7 @@ function AddForm({ categories, user, onAdd }){
     });
     setSaved(true);
     setTimeout(()=>setSaved(false),2000);
-    setForm(f=>({...f,amount:"",notes:"",fromCountry:"",country:"",city:""}));
+    setForm(f=>({...f,amount:"",notes:"",country:"",city:""})); // keep fromCountry for next expense
     setInvoice(null);
     if(fileRef.current) fileRef.current.value="";
   };
@@ -992,13 +997,17 @@ function AddForm({ categories, user, onAdd }){
           {/* From / To countries */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
             <div>
-              <label className="lbl">From Country (Home)</label>
+              <label className="lbl" style={{display:"flex",justifyContent:"space-between"}}>
+                <span>From Country (Home)</span>
+                {user.homeCountry && <span style={{color:"#10b981",fontWeight:400}}>✓ saved</span>}
+              </label>
               <select className="inp" value={form.fromCountry} onChange={e=>set("fromCountry",e.target.value)}>
                 <option value="">Select home country…</option>
                 {sortedCountries.map(c=>(
                   <option key={c.code+c.name} value={c.name}>{c.name} ({c.currency})</option>
                 ))}
               </select>
+              {!user.homeCountry && <div style={{fontSize:11,color:"#64748b",marginTop:4}}>Select once — remembered for future expenses</div>}
             </div>
             <div>
               <label className="lbl">To Country (Destination)</label>
