@@ -664,10 +664,11 @@ function UsersSection({ users, expenses, currentUser, onAdd, onUpdate, onDelete 
 function UserFormModal({ mode, existing, takenEmails, onSave, onClose }){
   const isEdit = mode==="edit";
   const [form, setForm] = useState({
-    name:  existing?.name  || "",
-    email: existing?.email || "",
-    role:  existing?.role  || "employee",
-    color: existing?.color || USER_COLORS[0],
+    name:        existing?.name        || "",
+    email:       existing?.email       || "",
+    role:        existing?.role        || "employee",
+    color:       existing?.color       || USER_COLORS[0],
+    homeCountry: existing?.homeCountry || "",
   });
   const [err, setErr] = useState("");
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
@@ -678,7 +679,7 @@ function UserFormModal({ mode, existing, takenEmails, onSave, onClose }){
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)){ setErr("Enter a valid email."); return; }
     const emailLower = form.email.toLowerCase().trim();
     if(!isEdit && takenEmails.map(e=>e.toLowerCase()).includes(emailLower)){ setErr("This email is already taken."); return; }
-    onSave({ name:form.name.trim(), email:emailLower, role:form.role, color:form.color, initials:initials(form.name) });
+    onSave({ name:form.name.trim(), email:emailLower, role:form.role, color:form.color, initials:initials(form.name), homeCountry:form.homeCountry });
   };
 
   const roleColor = r => r==="admin"?"#f43f5e":r==="manager"?"#10b981":"#6366f1";
@@ -728,6 +729,15 @@ function UserFormModal({ mode, existing, takenEmails, onSave, onClose }){
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Home Country */}
+        <div style={{marginBottom:14}}>
+          <label className="lbl">Home Country</label>
+          <select className="inp" value={form.homeCountry} onChange={e=>set("homeCountry",e.target.value)}>
+            <option value="">— Select home country —</option>
+            {COUNTRIES.map(c=><option key={c.code} value={c.name}>{c.name} ({c.currency})</option>)}
+          </select>
         </div>
 
         {/* Color */}
