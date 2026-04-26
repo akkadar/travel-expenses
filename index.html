@@ -905,7 +905,7 @@ function InvoiceModal({ src, onClose }){
 function AddForm({ categories, user, onAdd, onSaveHomeCountry }){
   const today = new Date().toISOString().slice(0,10);
   const [expenseType, setExpenseType] = useState("travel");
-  const [form, setForm] = useState({fromCountry: user.homeCountry||"", country:"",city:"",category:"Taxi",amount:"",date:today,notes:""});
+  const [form, setForm] = useState({fromCountry: user.homeCountry||"", country:"",city:"",category:"Taxi",amount:"",amountLocal:"",date:today,notes:""});
   const [invoice, setInvoice]   = useState(null);
   const [scanning, setScanning] = useState(false);
   const [saved, setSaved]       = useState(false);
@@ -935,13 +935,25 @@ function AddForm({ categories, user, onAdd, onSaveHomeCountry }){
   const sortedCountries = COUNTRIES.slice().sort((a,b)=>a.name.localeCompare(b.name));
 
   const set = (k,v) => {
-    setForm(f=>({...f,[k]:v,...(k==="country"?{city:""}:{})}));
+    setForm(f=>({...f,[k]:v,...(k==="country"?{city:"",amountLocal:""}:{})}));
     if(k==="fromCountry" && v) onSaveHomeCountry(v);
+  };
+
+  const handleAmountDest = (v) => {
+    const usd   = destCntry && v ? +v / destCntry.rate : 0;
+    const local = homeCntry && usd ? (usd * homeCntry.rate).toFixed(2) : "";
+    setForm(f=>({...f, amount:v, amountLocal:local}));
+  };
+
+  const handleAmountLocal = (v) => {
+    const usd  = homeCntry && v ? +v / homeCntry.rate : 0;
+    const dest = destCntry && usd ? (usd * destCntry.rate).toFixed(2) : "";
+    setForm(f=>({...f, amountLocal:v, amount:dest}));
   };
 
   const switchType = (t) => {
     setExpenseType(t);
-    setForm(f=>({...f,country:"",city:"",amount:"",notes:""}));
+    setForm(f=>({...f,country:"",city:"",amount:"",amountLocal:"",notes:""}));
   };
 
   const handleFile = async (e) => {
@@ -1082,18 +1094,39 @@ function AddForm({ categories, user, onAdd, onSaveHomeCountry }){
         </div>
 
         {/* Amount */}
-        <div style={{marginBottom:14}}>
-          <label className="lbl">Amount ({spendCntry ? spendCntry.currency : "USD"})</label>
-          <input type="number" step="0.01" min="0" placeholder="0.00" className="inp" value={form.amount} onChange={e=>set("amount",e.target.value)} required />
-          {form.amount>0 && (spendCntry||isTravel) && (
-            <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:3}}>
-              <span style={{fontSize:12,color:"#6366f1"}}>≈ ${fmt(amountUSD)} USD</span>
-              {amountHome!==null && homeCntry && (
-                <span style={{fontSize:12,color:"#10b981"}}>≈ {homeCntry.symbol}{fmt(amountHome)} {homeCntry.currency} (home)</span>
-              )}
+        {isTravel ? (
+          <div style={{marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"end"}}>
+              <div>
+                <label className="lbl">Amount in {destCntry ? destCntry.currency : "Destination Currency"}</label>
+                <input type="number" step="0.01" min="0" placeholder="0.00" className="inp"
+                  value={form.amount} onChange={e=>handleAmountDest(e.target.value)} required />
+              </div>
+              <div style={{paddingBottom:10,color:"#475569",fontSize:18,fontWeight:700,textAlign:"center"}}>⇄</div>
+              <div>
+                <label className="lbl">Amount in {homeCntry ? homeCntry.currency : "Home Currency"}</label>
+                <input type="number" step="0.01" min="0" placeholder="0.00" className="inp"
+                  value={form.amountLocal} onChange={e=>handleAmountLocal(e.target.value)}
+                  disabled={!homeCntry || !destCntry} style={{opacity:(!homeCntry||!destCntry)?.5:1}} />
+              </div>
             </div>
-          )}
-        </div>
+            {form.amount>0 && destCntry && (
+              <div style={{marginTop:6}}>
+                <span style={{fontSize:12,color:"#6366f1"}}>≈ ${fmt(amountUSD)} USD</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{marginBottom:14}}>
+            <label className="lbl">Amount ({spendCntry ? spendCntry.currency : "USD"})</label>
+            <input type="number" step="0.01" min="0" placeholder="0.00" className="inp" value={form.amount} onChange={e=>set("amount",e.target.value)} required />
+            {form.amount>0 && spendCntry && (
+              <div style={{marginTop:6}}>
+                <span style={{fontSize:12,color:"#6366f1"}}>≈ ${fmt(amountUSD)} USD</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{marginBottom:14}}>
           <label className="lbl">Notes (optional)</label>
